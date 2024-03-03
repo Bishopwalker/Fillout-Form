@@ -59,10 +59,6 @@ app.get('/:formId/responses', async (req, res) => {
 
 
 
-
-
-
-
         res.json({ responses: filteredResponses, totalResponses: filteredResponses.length });
 
     } catch (error) {
@@ -73,85 +69,6 @@ app.get('/:formId/responses', async (req, res) => {
         }
         return res.status(500).send({ message: "An error occurred while processing the request." });
     }
-});
-
-    app.get('/:formId/filteredResponses', async (req, res) => {
-    const { formId } = req.params;
-    const { limit=2, offset=0,id,name,formID, filters } = req.query;
-    const parsedFilters = JSON.parse(filters);
-
-    try {
-        const response = await axios.get(`https://api.fillout.com/${formId}/responses`, {
-            headers: { Authorization: `Bearer ${API_KEY}` },
-            params: { limit, offset, id, name, formID }
-        });
-console.log(response.data);
-
-
-        // Assuming `response.data` is an array and `parsedFilters` is your array of conditions.
-
-// First, validate the structure of `response.data`.
-        if (!Array.isArray(response.data)) {
-            return res.status(500).send({ message: "Unexpected API response structure." });
-        }
-
-// Then, filter `response.data`.
-        let filteredResponses = response.data.filter(item => {
-            // Ensure each item has a `questions` array.
-            if (!item.questions || !Array.isArray(item.questions)) {
-                // This item doesn't meet our criteria, so exclude it from the filtered results.
-                return false;
-            }
-
-            // Check if every condition in `parsedFilters` is met.
-            return parsedFilters.every(filter => {
-                // Find the corresponding question.
-                const question = item.questions.find(q => q.id === filter.id);
-
-                // If the question isn't found, exclude this item.
-                if (!question) return false;
-
-                // Evaluate the condition for the found question.
-                switch (filter.condition) {
-                    case 'equals':
-                        return question.value === filter.value;
-                    case 'does_not_equal':
-                        return question.value !== filter.value;
-                    case 'greater_than':
-                        // Assuming `question.value` and `filter.value` are comparable (e.g., numbers or date strings).
-                        return new Date(question.value) > new Date(filter.value);
-                    case 'less_than':
-                        return new Date(question.value) < new Date(filter.value);
-                    default:
-                        // If the condition is unknown, exclude this item.
-                        return false;
-                }
-            });
-        });
-
-// `filteredResponses` now contains the items that meet all conditions.
-// You can proceed with using `filteredResponses` as needed.
-
-
-        // Adjust totalResponses and pageCount based on filtering
-        const totalResponses = filteredResponses.length;
-        const pageCount = Math.ceil(totalResponses / pageSize);
-
-        res.json({
-            responses: filteredResponses,
-            totalResponses,
-            pageCount
-        });
-    } catch (error) {
-        console.error("Error fetching data from Fillout.com:", error.message);
-        if (error.response) {
-            // Log or handle HTTP response code errors
-            console.error("Response status:", error.response.status);
-            console.error("Response data:", error.response.data);
-        }
-        return res.status(500).send({ message: "An error occurred while processing the request." });
-    }
-
 });
 
 
